@@ -18,3 +18,4 @@ RUN chmod +x /entrypoint.sh
 EXPOSE 587 993
 
 CMD ["bash"]
+
