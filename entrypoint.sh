@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash 
 
 #  Postfix Configuration 
 postconf -e "home_mailbox = Maildir/"
