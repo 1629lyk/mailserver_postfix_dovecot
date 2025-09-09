@@ -219,6 +219,97 @@ systemctl status dovecot --no-pager
 
 ---
 
+## Add Additional Users
+
+### Add a Test User
+
+```bash
+# --- Create user alice ---
+sudo useradd -m -s /bin/bash alice
+echo "alice:<password>" | sudo chpasswd
+
+# Maildir for alice
+sudo -u alice maildirmake.dovecot /home/alice/Maildir
+sudo -u alice maildirmake.dovecot /home/alice/Maildir/.Drafts
+sudo -u alice maildirmake.dovecot /home/alice/Maildir/.Sent
+sudo -u alice maildirmake.dovecot /home/alice/Maildir/.Trash
+sudo -u alice maildirmake.dovecot /home/alice/Maildir/.Junk
+sudo chown -R alice:alice /home/alice/Maildir
+```
+
+### Test Authentication
+
+```bash
+sudo doveadm auth test 'alice' '<passwd>'
+```
+
+#### Expected output:
+```bash
+passdb: alice auth succeeded
+```
+
+### Outlook (Classic) Configuration for User Alice
+
+* Email: `alice@localhost.localdomain`
+* IMAP server: mail.localhost — port 993 — SSL/TLS
+* SMTP server: mail.localhost — port 587 — STARTTLS
+* Username: alice
+* Password: <passwd>
+
+---
+
+## Change Hostname to localhost.localdomain
+
+You’re seeing **`alice@Lakhan-Kumar`** because the message was sent locally (via `mail` / GNU mailutils), which by default builds the sender as:
+
+```
+<linux-username>@<machine-hostname>
+```
+
+The hostname is **`Lakhan-Kumar`**, so the envelope sender becomes `alice@Lakhan-Kumar`. Postfix will accept that as-is unless you tell it to **rewrite** local sender addresses to your preferred domain (**`localhost.localdomain`**).
+
+You already set:
+
+* `myhostname = mail.localhost`
+* `mydomain   = localhost.localdomain`
+* `myorigin   = $mydomain`
+
+but those only help when the sender is just `alice` (no `@domain`). Since mailutils gives Postfix a *fully qualified* sender (`alice@Lakhan-Kumar`), Postfix does **not** override it automatically.
+
+### Rewrite all local senders to `@localhost.localdomain`
+
+1. Install PCRE maps:
+
+```bash
+sudo apt update
+sudo apt install -y postfix-pcre
+```
+
+2. Create a sender canonical map that rewrites any `user@anything` to `user@localhost.localdomain`:
+
+```bash
+sudo tee /etc/postfix/sender_canonical.pcre >/dev/null <<'EOF'
+/^([^@]+)@.*/     ${1}@localhost.localdomain
+EOF
+```
+
+3. Update and Relod Postifx:
+
+```bash
+sudo postconf -e 'sender_canonical_maps = pcre:/etc/postfix/sender_canonical.pcre'
+sudo systemctl reload postfix
+```
+
+4. Test:
+
+```bash
+echo "Hello" | mail -s "Test rewrite" alice@localhost.localdomain
+sudo tail -n 30 /var/log/mail.log
+# Then open the new file in ~/Maildir/new and check:
+# Return-Path: <alice@localhost.localdomain>
+# From: alice@localhost.localdomain
+```
+
 ## Debugging & Verification
 
 ### Service status
