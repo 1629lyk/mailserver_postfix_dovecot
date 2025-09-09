@@ -310,6 +310,8 @@ sudo tail -n 30 /var/log/mail.log
 # From: alice@localhost.localdomain
 ```
 
+---
+
 ## Debugging & Verification
 
 ### Service status
