@@ -312,6 +312,50 @@ sudo tail -n 30 /var/log/mail.log
 
 ---
 
+## Backup using Dovecot
+
+```bash
+sudo chmod 751 /var/backups/dovecot
+
+# Create per-user dir and give it to the user
+sudo mkdir -p /var/backups/dovecot/lakhan-kumar/Maildir
+sudo chown -R lakhan-kumar:lakhan-kumar /var/backups/dovecot/lakhan-kumar
+
+# Run backup
+sudo doveadm -v backup -u lakhan-kumar maildir:/var/backups/dovecot/lakhan-kumar/Maildir
+
+# Verify
+ls -l /var/backups/dovecot/lakhan-kumar/Maildir/cur | head
+```
+
+For other users (e.g., `alice`)
+
+```bash
+sudo mkdir -p /var/backups/dovecot/{alice,bob}/Maildir
+sudo chown -R alice:alice /var/backups/dovecot/alice
+sudo doveadm -v backup -u alice maildir:/var/backups/dovecot/alice/Maildir
+```
+
+### For dovecot-backup.sh file 
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+users=("lakhan-kumar" "alice")
+for u in "${users[@]}"; do
+  doveadm -v backup -u "$u"maildir:/var/backups/dovecot/$u/Maildir
+done
+```
+
+```bash
+sudo chmod +x /usr/local/sbin/dovecot-backup.sh
+```
+
+---
+
+<!-- Add More Info from here -->
+
+
 ## Debugging & Verification
 
 ### Service status
